@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type cell struct {
+type Cell struct {
 	Etat                  string //"I" infecté, "S" sain, "G" guéri
 	probaInfectionMoyenne float32
 	tempsInfectionRestant int //nombre d'itérations où il sera encore infecté
@@ -16,13 +16,10 @@ type cell struct {
 	posj                  int
 }
 
-func cellule(carre *cell) {
-
-}
-
-func initcellule(cellule *cell, probaInfectionMoyenne float32, tempsInfectionMoyen int, i int, j int, proba float32, wg *sync.WaitGroup) {
+func initcellule(cellule *Cell, probaInfectionMoyenne float32, tempsInfectionMoyen int, i int, j int, proba float32, wg *sync.WaitGroup) {
 	cellule.posi = i
 	cellule.posj = j
+
 	aleatoire := rand.Float32() //genere un nombre aleatoire entre 0 et 1 (loi uniforme)
 	if aleatoire > proba {
 		cellule.Etat = "S"
@@ -41,17 +38,25 @@ func initcellule(cellule *cell, probaInfectionMoyenne float32, tempsInfectionMoy
 }
 
 func main() {
-	var size int = 4
+
+	var size int
 	var proba float32 = 0.2
-	var probaInfectionMoyenne float32 = 0.3
-	var nbIterations int = 1000
-	var tempsInfectionMoyen int = 10
+	var probaInfectionMoyenne float32
+	var nbIterations int
+	var tempsInfectionMoyen int
 	var wg sync.WaitGroup
+	fmt.Print("entrez la taille de la grille ")
+	fmt.Scanln(&size)
+	fmt.Print("Entrez le nombre d'itérations ")
+	fmt.Scanln(&nbIterations)
+	fmt.Print("Choisissez le temps d'infection moyen ")
+	fmt.Scanln(&tempsInfectionMoyen)
+
 	rand.Seed(time.Now().UnixNano())
 
-	matrice := make([][]cell, size)
+	matrice := make([][]Cell, size)
 	for i := range matrice {
-		matrice[i] = make([]cell, size)
+		matrice[i] = make([]Cell, size)
 
 	}
 	wg.Add(size * size)
@@ -69,7 +74,7 @@ func main() {
 
 		for j := range matrice {
 			for k := range matrice[j] {
-				go cellule(&matrice[j][k])
+				go evolveCell(&matrice[j][k], matrice, &wg)
 			}
 		}
 		wg.Wait()
