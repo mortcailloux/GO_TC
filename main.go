@@ -38,21 +38,26 @@ func initcellule(cellule *Cell, probaInfectionMoyenne float32, tempsInfectionMoy
 }
 
 func main() {
-
 	var size int
 	var proba float32 = 0.2
 	var probaInfectionMoyenne float32
 	var nbIterations int
 	var tempsInfectionMoyen int
 	var wg sync.WaitGroup
+	var display bool
+	var temp string
+	var fin string
 	fmt.Print("entrez la taille de la grille ")
 	fmt.Scanln(&size)
 	fmt.Print("Entrez le nombre d'itérations ")
 	fmt.Scanln(&nbIterations)
 	fmt.Print("Choisissez le temps d'infection moyen ")
 	fmt.Scanln(&tempsInfectionMoyen)
-
+	fmt.Print("Voulez-vous afficher l'état de l'automate dans la console à chaque itération ? (oui/non)")
+	fmt.Scanln(&temp)
+	display = temp == "oui" || temp == "Oui" || temp == "OUI"
 	rand.Seed(time.Now().UnixNano())
+	fmt.Print("Initialisation de la grille...")
 
 	matrice := make([][]Cell, size)
 	for i := range matrice {
@@ -78,7 +83,11 @@ func main() {
 			}
 		}
 		wg.Wait()
+		if display {
+			displayMatrix(matrice)
+		}
 	}
-
-	fmt.Println("Hello, World!")
+	visualizeMatrix(matrice, "fin.png")
+	fmt.Print("Appuyez sur n'importe quelle touche pour quitter le programme")
+	fmt.Scanln(&fin)
 }

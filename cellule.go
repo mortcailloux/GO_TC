@@ -9,10 +9,9 @@ import (
 // Cell represents a single individual in the grid
 
 // evolveCell evolves the state of a cell based on its neighbors
-// evolveCell evolves the state of a cell based on its neighbors
-func evolveCell(cell *Cell, grid [][]Cell, wg *sync.WaitGroup) {
+func evolveCell(cell *Cell, grid [][]Cell, wg *sync.WaitGroup) bool {
 	rand.Seed(time.Now().UnixNano())
-
+	var changement bool = false
 	// Find neighboring cells
 	neighbors := findNeighbors(cell, grid)
 
@@ -27,22 +26,26 @@ func evolveCell(cell *Cell, grid [][]Cell, wg *sync.WaitGroup) {
 
 		// Infection only happens if the random number is less than the infection probability
 		if rand.Float32() < proba {
+			changement = true
 			cell.Etat = "I"
 			cell.tempsInfectionRestant = rand.Intn(5) + 1 // Random infection duration (e.g., 1-5 iterations)
 		}
 	case "I": // Infected
 		cell.tempsInfectionRestant--
 		if cell.tempsInfectionRestant <= 0 {
+			changement = true
 			cell.Etat = "G"
 			cell.tempsImmuniteRestant = rand.Intn(5) + 1 // Random immunity duration (e.g., 1-5 iterations)
 		}
 	case "G": // Recovered (immune)
 		cell.tempsImmuniteRestant--
 		if cell.tempsImmuniteRestant <= 0 {
+			changement = true
 			cell.Etat = "S" // Becomes susceptible again
 		}
 	}
 	wg.Done()
+	return changement //utile pour arrêter le programme plus tôt s'il n'y a plus de changements même si les itérations n'ont pas fini
 }
 
 // findNeighbors finds the neighbors of a cell in the grid

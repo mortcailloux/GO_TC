@@ -29,7 +29,7 @@ func (cs *ColoredScatter) XY(i int) (float64, float64) {
 	return cs.Xs[i], cs.Ys[i]
 }
 
-func main() {
+func test2() {
 	// Dimensions de la matrice
 	rows, cols := 10, 10
 	matrix := make([][]int, rows)
