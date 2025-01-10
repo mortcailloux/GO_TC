@@ -44,9 +44,11 @@ func main() {
 	var nbIterations int
 	var tempsInfectionMoyen int
 	var wg sync.WaitGroup
+	var syncmodification sync.WaitGroup
 	var display bool
 	var temp string
 	var fin string
+	var changement bool
 	fmt.Print("entrez la taille de la grille ")
 	fmt.Scanln(&size)
 	fmt.Print("Entrez le nombre d'itérations ")
@@ -73,19 +75,28 @@ func main() {
 		}
 	}
 	wg.Wait()
+	fmt.Print("Execution du programme principal")
+
 	//programme principal
-	for i := 0; i < nbIterations; i++ {
+	i := 0
+	for i := 0; i < nbIterations && !changement; i++ {
 		wg.Add(size * size)
+		syncmodification.Add(size * size)
+		changement = false
 
 		for j := range matrice {
 			for k := range matrice[j] {
-				go evolveCell(&matrice[j][k], matrice, &wg)
+				go evolveCell(&matrice[j][k], matrice, &wg, &syncmodification, &changement)
 			}
 		}
 		wg.Wait()
 		if display {
 			displayMatrix(matrice)
 		}
+	}
+	if i < nbIterations {
+		fmt.Printf("Le programme a trouvé un état stable et s'est arrêté à la %d itération", i)
+
 	}
 	visualizeMatrix(matrice, "fin.png")
 	fmt.Print("Appuyez sur n'importe quelle touche pour quitter le programme")
