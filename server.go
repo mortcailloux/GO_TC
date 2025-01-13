@@ -5,56 +5,71 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 )
 
-func server(address string, portString string) {
-	ln, err := net.Listen("tcp", portString) //écouter sur le port portString
+func server(portString string) {
+	ln, err := net.Listen("tcp", portString) // Écouter sur le port
 	if err != nil {
-		fmt.Println("Erreur lors de l'ecoute sur le port:", err)
+		fmt.Println("Erreur lors de l'écoute sur le port :", err)
 		return
 	}
 
-	defer ln.Close() //fermeture de la connexion
-	message := fmt.Sprintf("serveur en écoute sur le port %d", portString)
+	defer ln.Close() // Fermeture de la connexion
+	message := fmt.Sprintf("Serveur en écoute sur le port %s", portString)
 	fmt.Println(message)
 
-	// boucle infinie pour accepter toutes les connexions entrantes
+	// Boucle infinie pour accepter toutes les connexions entrantes
 	for {
-		//acceptation d'une nouvelle connexion sur ce port
+		// Acceptation d'une nouvelle connexion sur ce port
 		conn, errconn := ln.Accept()
 		if errconn != nil {
-			fmt.Println("erreur de tentative de connexion", errconn)
+			fmt.Println("Erreur de tentative de connexion :", errconn)
 			continue
 		}
-		// gestion de la connection dans une goroutine
+		// Gestion de la connexion dans une goroutine
 		go gestionConnexion(conn)
-
 	}
 }
 
 func gestionConnexion(conn net.Conn) {
-	/*
-		Dans chaque goroutine, le serveur lit et envoie des bytes au client
-	*/
 	defer conn.Close() // Assure que la connexion est fermée à la fin de la fonction
 
-	// Crée un nouveau lecteur pour lire les données de la connexion
 	reader := bufio.NewReader(conn)
 
-	// Lit une ligne de données envoyées par le client
-	message, err := reader.ReadString('\n')
+	// Demande des paramètres au client
+	tailleGrille := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
+	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
+	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
+	afficherEtat := demanderAuClient(reader, conn, "Voulez-vous afficher l'état de l'automate dans la console à chaque itération ? (oui/non)")
+
+	// Confirmation de réception des paramètres
+	fmt.Printf("Paramètres reçus : Taille de la grille = %s, Nombre d'itérations = %s, Temps d'infection = %s, Afficher état = %s\n",
+		tailleGrille, nombreIterations, tempsInfection, afficherEtat)
+
+	// Initialisation de la grille ou autre traitement
+	_, err := io.WriteString(conn, "Initialisation de la grille...\n")
+	if err != nil {
+		fmt.Println("Erreur lors de l'envoi de l'initialisation :", err)
+	}
+}
+
+func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) string {
+	// Envoie une demande au client
+	_, err := io.WriteString(conn, demande+"\n")
+	if err != nil {
+		fmt.Println("Erreur lors de l'envoi de la demande :", err)
+		return ""
+	}
+
+	// Lit la réponse du client
+	reponse, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Println("Erreur lors de la lecture :", err)
-		return // Quitte la fonction si une erreur se produit
+		return ""
 	}
 
-	// Affiche le message reçu
-	fmt.Printf("Données reçues : %s", message)
-
-	// Envoie une réponse au client
-	response := fmt.Sprintf("Coucou, vous avez envoyé : %s", message)
-	_, err = io.WriteString(conn, response)
-	if err != nil {
-		fmt.Println("Erreur lors de l'envoi de la réponse :", err) // Affiche l'erreur si l'envoi échoue
-	}
+	// Nettoie la réponse
+	reponse = strings.TrimSpace(reponse)
+	return reponse
 }
