@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 )
 
 func client(portString string) {
@@ -37,10 +38,9 @@ func client(portString string) {
 
 		fmt.Print("Message from server: " + message)
 
-		if message == "Initialisation de la grille...\n" {
-			// Step 2: Receive the program output from the server
+		if message == "Initialisation de la grille..." {
 			for {
-				programOutput, err := reader.ReadString('\n')
+				programOutput, err := reader.ReadString('\t')
 				if err != nil {
 					if err == io.EOF {
 						fmt.Println("Server closed the connection.")
@@ -50,12 +50,11 @@ func client(portString string) {
 					break
 				}
 
-				// Print the program output
+				// Print program output
 				fmt.Print("Program output: " + programOutput)
 
-				// Exit if the program indicates it's done
-				if programOutput == "Program finished.\n" {
-					fmt.Println("Interaction completed. Closing connection.")
+				// If the message is "Done.\n", close the connection
+				if strings.Contains(programOutput, "Le programme a trouvé un état stable et s'est arrêté à") {
 					return
 				}
 			}
