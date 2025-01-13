@@ -37,8 +37,7 @@ func client(portString string) {
 
 		fmt.Print("Message from server: " + message)
 
-		if message == "Running program...\n" {
-			fmt.Println("Waiting for program output...")
+		if message == "Initialisation de la grille...\n" {
 			// Step 2: Receive the program output from the server
 			for {
 				programOutput, err := reader.ReadString('\n')
