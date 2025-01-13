@@ -45,6 +45,41 @@ func displayMatrix(matrix [][]Cell) error { //affichage matrice console (avec I/
 	return nil
 }
 
+func MatrixtoString(matrix [][]Cell) string {
+	rows := len(matrix)
+	if rows == 0 {
+		return "matrice vide"
+	}
+	retour := ""
+
+	fmt.Println("État actuel de la matrice :")
+	for i := range matrix {
+		for j := range matrix[i] {
+			switch matrix[i][j].Etat {
+			case "S":
+				retour += "S "
+			case "I":
+				retour += "I "
+			case "G":
+				retour += "G "
+			default:
+				retour += "? "
+			}
+		}
+		retour += "\n" // Nouvelle ligne pour chaque rangée
+	}
+
+	// Afficher la légende
+	retour += "\nLégende:"
+	retour += "S: Sain"
+	retour += "I: Infecté"
+	retour += "G: Guéri"
+	retour += "\n \n \n " //espaces à la fin pour distinguer les matrices quand elles sont affichées à la suite
+
+	return retour
+
+}
+
 func createSquare(x, y float64) plotter.XYs {
 	return plotter.XYs{
 		{X: x - 0.5, Y: y - 0.5}, // Coin inférieur gauche
