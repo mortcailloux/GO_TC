@@ -38,9 +38,9 @@ func client(portString string) {
 
 		fmt.Print("Message from server: " + message)
 
-		if message == "Initialisation de la grille..." {
+		if message == "Initialisation de la grille...\n" {
 			for {
-				programOutput, err := reader.ReadString('\t')
+				line, err := reader.ReadString('\n')
 				if err != nil {
 					if err == io.EOF {
 						fmt.Println("Server closed the connection.")
@@ -50,8 +50,11 @@ func client(portString string) {
 					break
 				}
 
-				// Print program output
-				fmt.Print("Program output: " + programOutput)
+				programOutput := ""
+				programOutput += line                          // Append to the output
+				if strings.Contains(programOutput, "\n\n\n") { // Check for the triple newline
+					break
+				}
 
 				// If the message is "Done.\n", close the connection
 				if strings.Contains(programOutput, "Le programme a trouvé un état stable et s'est arrêté à") {
@@ -59,19 +62,25 @@ func client(portString string) {
 				}
 			}
 			break
-		}
+		} else {
 
-		fmt.Print(">> ")
-		response, err := userInputReader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input:", err)
-			return
-		}
+			fmt.Print(">> ")
+			response, err := userInputReader.ReadString('\n')
+			if err != nil {
+				fmt.Println("Error reading input:", err)
+				return
+			}
 
-		_, err = io.WriteString(conn, response)
-		if err != nil {
-			fmt.Println("Error sending response:", err)
-			return
+			_, err = io.WriteString(conn, response)
+			if err != nil {
+				fmt.Println("Error sending response:", err)
+				return
+			}
 		}
 	}
+}
+
+func main() {
+	portString := "127.0.0.1:7777"
+	client(portString)
 }

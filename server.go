@@ -56,13 +56,18 @@ func gestionConnexion(conn net.Conn) {
 	_, err := io.WriteString(conn, "Initialisation de la grille...\n")
 	if err != nil {
 		fmt.Println("Erreur lors de l'envoi de l'initialisation :", err)
-		//affichage de la matrice initiale
-		matrice := make([][]Cell, size_int)
-		for i := range matrice {
-			matrice[i] = make([]Cell, size_int)
-		}
-		print(MatrixtoString(matrice))
 	}
+	//affichage de la matrice initiale
+	matrice := make([][]Cell, size_int)
+	for i := range matrice {
+		matrice[i] = make([]Cell, size_int)
+	}
+	_, err = io.WriteString(conn, MatrixtoString(matrice))
+	if err != nil {
+		fmt.Println("Erreur lors de l'envoi de la matrice :", err)
+		return
+	}
+
 }
 
 func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) string {
