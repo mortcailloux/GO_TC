@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -38,19 +39,29 @@ func gestionConnexion(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	// Demande des paramètres au client
-	tailleGrille := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
+	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
 	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
 	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
 	afficherEtat := demanderAuClient(reader, conn, "Voulez-vous afficher l'état de l'automate dans la console à chaque itération ? (oui/non)")
-
+	size_int, mist := strconv.Atoi(size)
+	if mist != nil {
+		fmt.Println("Erreur de conversion:", mist)
+		return
+	}
 	// Confirmation de réception des paramètres
 	fmt.Printf("Paramètres reçus : Taille de la grille = %s, Nombre d'itérations = %s, Temps d'infection = %s, Afficher état = %s\n",
-		tailleGrille, nombreIterations, tempsInfection, afficherEtat)
+		size, nombreIterations, tempsInfection, afficherEtat)
 
 	// Initialisation de la grille ou autre traitement
 	_, err := io.WriteString(conn, "Initialisation de la grille...\n")
 	if err != nil {
 		fmt.Println("Erreur lors de l'envoi de l'initialisation :", err)
+		//affichage de la matrice initiale
+		matrice := make([][]Cell, size_int)
+		for i := range matrice {
+			matrice[i] = make([]Cell, size_int)
+		}
+		print(MatrixtoString(matrice))
 	}
 }
 
