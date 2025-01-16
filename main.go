@@ -60,7 +60,7 @@ func main() {
 	display = temp == "oui" || temp == "Oui" || temp == "OUI"
 	rand.Seed(time.Now().UnixNano())
 	fmt.Print("Initialisation de la grille...")
-
+	start := time.Now()
 	matrice := make([][]Cell, size)
 	for i := range matrice {
 		matrice[i] = make([]Cell, size)
@@ -78,8 +78,10 @@ func main() {
 	fmt.Print("Execution du programme principal")
 
 	//programme principal
-	i := 0
-	for i := 0; i < nbIterations && !changement; i++ {
+	var iter int
+	changement = false
+
+	for i := 0; i < nbIterations; i++ {
 		wg.Add(size * size)
 		syncmodification.Add(size * size)
 		changement = false
@@ -93,12 +95,15 @@ func main() {
 		if display {
 			displayMatrix(matrice)
 		}
+		iter = i
 	}
-	if i < nbIterations {
-		fmt.Printf("Le programme a trouvé un état stable et s'est arrêté à la %d itération", i)
+	if iter < nbIterations {
+		fmt.Printf("Le programme a trouvé un état stable et s'est arrêté à la %d itération", iter)
 
 	}
 	visualizeMatrix(matrice, "fin.png")
+	fmt.Printf("\ntemps d'execution: %v", time.Since(start))
+	performances(nbIterations, size, tempsInfectionMoyen, probaInfectionMoyenne, proba)
 	fmt.Print("Appuyez sur n'importe quelle touche pour quitter le programme")
 	fmt.Scanln(&fin)
 }
