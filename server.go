@@ -10,64 +10,56 @@ import (
 )
 
 func server(portString string) {
-	ln, err := net.Listen("tcp", portString) // Écouter sur le port
+	ln, err := net.Listen("tcp", portString)
 	if err != nil {
 		fmt.Println("Erreur lors de l'écoute sur le port :", err)
 		return
 	}
+	defer ln.Close()
 
-	defer ln.Close() // Fermeture de la connexion
-	message := fmt.Sprintf("Serveur en écoute sur le port %s", portString)
-	fmt.Println(message)
+	fmt.Printf("Serveur en écoute sur %s\n", portString)
 
-	// Boucle infinie pour accepter toutes les connexions entrantes
 	for {
-		// Acceptation d'une nouvelle connexion sur ce port
-		conn, errconn := ln.Accept()
-		if errconn != nil {
-			fmt.Println("Erreur de tentative de connexion :", errconn)
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Erreur de tentative de connexion :", err)
 			continue
 		}
-		// Gestion de la connexion dans une goroutine
 		go gestionConnexion(conn)
 	}
 }
 
 func gestionConnexion(conn net.Conn) {
-	defer conn.Close() // Assure que la connexion est fermée à la fin de la fonction
-
+	defer conn.Close()
 	reader := bufio.NewReader(conn)
 
-	// Demande des paramètres au client
+	// Phase 1 : Questions initiales
 	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
 	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
 	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
-	afficherEtat := demanderAuClient(reader, conn, "Voulez-vous afficher l'état de l'automate dans la console à chaque itération ? (oui/non)")
-	size_int, mist := strconv.Atoi(size)
-	if mist != nil {
-		fmt.Println("Erreur de conversion:", mist)
-		return
-	}
-	// Confirmation de réception des paramètres
-	fmt.Printf("Paramètres reçus : Taille de la grille = %s, Nombre d'itérations = %s, Temps d'infection = %s, Afficher état = %s\n",
-		size, nombreIterations, tempsInfection, afficherEtat)
 
-	// Initialisation de la grille ou autre traitement
-	_, err := io.WriteString(conn, "Initialisation de la grille...\n")
+	// Conversion de la taille de la grille en entier
+	sizeInt, err := strconv.Atoi(size)
 	if err != nil {
-		fmt.Println("Erreur lors de l'envoi de l'initialisation :", err)
-	}
-	//affichage de la matrice initiale
-	matrice := make([][]Cell, size_int)
-	for i := range matrice {
-		matrice[i] = make([]Cell, size_int)
-	}
-	_, err = io.WriteString(conn, MatrixtoString(matrice))
-	if err != nil {
-		fmt.Println("Erreur lors de l'envoi de la matrice :", err)
+		fmt.Println("Erreur de conversion de la taille :", err)
+		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
 		return
 	}
 
+	// Confirmation des réponses reçues
+	fmt.Printf("Paramètres reçus : Taille = %s, Iterations = %s, TempsInfection = %s\n", size, nombreIterations, tempsInfection)
+	_, _ = io.WriteString(conn, "Paramètres reçus, début de l'envoi des données.\n")
+
+	// Phase 2 : Envoi continu de données
+	for i := 0; i < 10; i++ { // Simulation de 10 envois
+		data := fmt.Sprintf("Données %d : Simulation de calcul avec grille %dx%d...\n", i+1, sizeInt, sizeInt)
+		//ici on va faire l'automate cellulaire
+		//il faut faire une fonction autre que main qui va prendre les paramètres pour construire la matrice et envoyer le string qui sera affiché
+		//côté client
+	}
+
+	// Signal de fin
+	_, _ = io.WriteString(conn, "FIN_DATA\n")
 }
 
 func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) string {
@@ -81,7 +73,7 @@ func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) strin
 	// Lit la réponse du client
 	reponse, err := reader.ReadString('\n')
 	if err != nil {
-		fmt.Println("Erreur lors de la lecture :", err)
+		fmt.Println("Erreur lors de la lecture de la réponse :", err)
 		return ""
 	}
 
