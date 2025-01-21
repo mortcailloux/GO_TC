@@ -51,7 +51,7 @@ func swapGrids(current, next *[][]Cell) {
 	*current, *next = *next, *current
 }
 
-func main() {
+func ancienMain() {
 	var size int
 	var proba float32 = 0.2
 	var probaInfectionMoyenne float32
