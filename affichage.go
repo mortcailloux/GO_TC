@@ -45,17 +45,17 @@ func displayMatrix(matrix [][]Cell) error { //affichage matrice console (avec I/
 	return nil
 }
 
-func MatrixtoString(matrix [][]Cell) string {
-	rows := len(matrix)
+func MatrixtoString(matrix *[][]Cell) string {
+	rows := len(*matrix)
 	if rows == 0 {
 		return "matrice vide"
 	}
 	retour := ""
 
 	fmt.Println("État actuel de la matrice :")
-	for i := range matrix {
-		for j := range matrix[i] {
-			switch matrix[i][j].Etat {
+	for i := range *matrix {
+		for j := range (*matrix)[i] {
+			switch (*matrix)[i][j].Etat {
 			case "S":
 				retour += "S "
 			case "I":

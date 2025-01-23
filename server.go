@@ -138,8 +138,7 @@ func gestionConnexion(conn net.Conn) {
 		swapGrids(&currentGrid, &nextGrid)
 
 		if display {
-			//construire le string à partir de la matrice
-			//envoyer au client
+			sendMatrix(&currentGrid, conn)
 		}
 
 	}
@@ -149,41 +148,9 @@ func gestionConnexion(conn net.Conn) {
 
 }
 
-func gestionConnexionOld(conn net.Conn) {
-	defer conn.Close()
-	reader := bufio.NewReader(conn)
-
-	// Phase 1 : Questions initiales
-	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
-	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
-	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
-
-	// Conversion de la taille de la grille en entier
-	sizeInt, err := strconv.Atoi(size)
-	if err != nil {
-		fmt.Println("Erreur de conversion de la taille :", err)
-		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
-		return
-	}
-
-	// Confirmation des réponses reçues
-	fmt.Printf("Paramètres reçus : Taille = %s, Iterations = %s, TempsInfection = %s\n", size, nombreIterations, tempsInfection)
-	_, _ = io.WriteString(conn, "Paramètres reçus, début de l'envoi des données.\n")
-
-	// Phase 2 : Envoi continu de données
-	for i := 0; i < 10; i++ { // Simulation de 10 envois
-		data := fmt.Sprintf("Données %d : Simulation de calcul avec grille %dx%d...\n", i+1, sizeInt, sizeInt)
-		//ici on va faire l'automate cellulaire
-		//il faut faire une fonction autre que main qui va prendre les paramètres pour construire la matrice et envoyer le string qui sera affiché
-		//côté client
-	}
-
-	// Signal de fin
-	_, _ = io.WriteString(conn, "FIN_DATA\n")
-}
-
-func sendMatrix(matrice *matrice, conn net.Conn) {
-	_, err := io.WriteString(conn, matrice+"\n")
+func sendMatrix(matrice *[][]Cell, conn net.Conn) {
+	stringMatrix := MatrixtoString(matrice)
+	_, err := io.WriteString(conn, stringMatrix+"\n")
 	if err != nil {
 		fmt.Println("Erreur lors de l'envoi de la matrice :", err)
 		return
