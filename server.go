@@ -32,6 +32,25 @@ func server(portString string) {
 		go gestionConnexion(conn)
 	}
 }
+func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) string {
+	// Envoie une demande au client
+	_, err := io.WriteString(conn, demande+"\n")
+	if err != nil {
+		fmt.Println("Erreur lors de l'envoi de la demande :", err)
+		return ""
+	}
+
+	// Lit la réponse du client
+	reponse, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Erreur lors de la lecture :", err)
+		return ""
+	}
+
+	// Nettoie la réponse
+	reponse = strings.TrimSpace(reponse)
+	return reponse
+}
 
 func gestionConnexion(conn net.Conn) {
 	defer conn.Close() // Assure que la connexion est fermée à la fin de la fonction
@@ -65,22 +84,10 @@ func gestionConnexion(conn net.Conn) {
 	}
 }
 
-func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) string {
-	// Envoie une demande au client
-	_, err := io.WriteString(conn, demande+"\n")
+func sendMatrix(matrice *matrice, conn net.Conn) {
+	_, err := io.WriteString(conn, matrice+"\n")
 	if err != nil {
-		fmt.Println("Erreur lors de l'envoi de la demande :", err)
-		return ""
+		fmt.Println("Erreur lors de l'envoi de la matrice :", err)
+		return
 	}
-
-	// Lit la réponse du client
-	reponse, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Erreur lors de la lecture :", err)
-		return ""
-	}
-
-	// Nettoie la réponse
-	reponse = strings.TrimSpace(reponse)
-	return reponse
 }
