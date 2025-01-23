@@ -4,31 +4,30 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 func server(portString string) {
-	ln, err := net.Listen("tcp", portString) // Écouter sur le port
+	ln, err := net.Listen("tcp", portString)
 	if err != nil {
 		fmt.Println("Erreur lors de l'écoute sur le port :", err)
 		return
 	}
+	defer ln.Close()
 
-	defer ln.Close() // Fermeture de la connexion
-	message := fmt.Sprintf("Serveur en écoute sur le port %s", portString)
-	fmt.Println(message)
+	fmt.Printf("Serveur en écoute sur %s\n", portString)
 
-	// Boucle infinie pour accepter toutes les connexions entrantes
 	for {
-		// Acceptation d'une nouvelle connexion sur ce port
-		conn, errconn := ln.Accept()
-		if errconn != nil {
-			fmt.Println("Erreur de tentative de connexion :", errconn)
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Erreur de tentative de connexion :", err)
 			continue
 		}
-		// Gestion de la connexion dans une goroutine
 		go gestionConnexion(conn)
 	}
 }
@@ -53,35 +52,134 @@ func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) strin
 }
 
 func gestionConnexion(conn net.Conn) {
-	defer conn.Close() // Assure que la connexion est fermée à la fin de la fonction
-
+	defer conn.Close()
 	reader := bufio.NewReader(conn)
 
-	// Demande des paramètres au client
+	// Phase 1 : Questions initiales
 	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
 	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
 	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
-	afficherEtat := demanderAuClient(reader, conn, "Voulez-vous afficher l'état de l'automate dans la console à chaque itération ? (oui/non)")
-	size_int, mist := strconv.Atoi(size)
-	if mist != nil {
-		fmt.Println("Erreur de conversion:", mist)
+
+	// Conversion de la taille de la grille en entier
+	sizeInt, err := strconv.Atoi(size)
+
+	if err != nil {
+		fmt.Println("Erreur de conversion de la taille :", err)
+		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
 		return
 	}
-	// Confirmation de réception des paramètres
-	fmt.Printf("Paramètres reçus : Taille de la grille = %s, Nombre d'itérations = %s, Temps d'infection = %s, Afficher état = %s\n",
-		size, nombreIterations, tempsInfection, afficherEtat)
-
-	// Initialisation de la grille ou autre traitement
-	_, err := io.WriteString(conn, "Initialisation de la grille...\n")
+	nbIterations, err := strconv.Atoi(nombreIterations)
 	if err != nil {
-		fmt.Println("Erreur lors de l'envoi de l'initialisation :", err)
-		//affichage de la matrice initiale
-		matrice := make([][]Cell, size_int)
-		for i := range matrice {
-			matrice[i] = make([]Cell, size_int)
-		}
-		print(MatrixtoString(matrice))
+		fmt.Println("Erreur de conversion du nombre d'itérations :", err)
+		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
+		return
 	}
+	tempsInfectionMoyen, err := strconv.Atoi(nombreIterations)
+	if err != nil {
+		fmt.Println("Erreur de conversion du temps d'infection :", err)
+		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
+		return
+	}
+	// Confirmation des réponses reçues
+	fmt.Printf("Paramètres reçus : Taille = %s, Iterations = %s, TempsInfection = %s\n", size, nombreIterations, tempsInfection)
+	_, _ = io.WriteString(conn, "Paramètres reçus, début de l'envoi des données.\n")
+
+	// Phase 2 : Envoi continu de données
+
+	// Signal de fin
+	_, _ = io.WriteString(conn, "FIN_DATA\n")
+	var proba float32 = 0.2
+	var probaInfectionMoyenne float32
+
+	var display bool
+
+	display = true
+
+	rand.Seed(time.Now().UnixNano())
+	start := time.Now()
+
+	// Création des deux grilles pour éviter d'écrire dans la même grile que celle où l'on lit
+	currentGrid := make([][]Cell, sizeInt)
+	nextGrid := make([][]Cell, sizeInt)
+	for i := range currentGrid {
+		currentGrid[i] = make([]Cell, sizeInt)
+		nextGrid[i] = make([]Cell, sizeInt)
+		for j := range currentGrid[i] {
+			initcellule(&currentGrid[i][j], probaInfectionMoyenne, tempsInfectionMoyen, i, j, proba)
+		}
+	}
+
+	numWorkers := 8                               //mettre la même valeur que le nombre de coeur
+	batchSize := (sizeInt * sizeInt) / numWorkers //on calcule la taille de la sous grille sur laquelle on va travailler (pas forcément un carré)
+	if batchSize < 1 {
+		batchSize = 1
+	}
+
+	var wg sync.WaitGroup
+	changement := false
+
+	// Boucle principale
+	for iter := 0; iter < nbIterations; iter++ {
+		changement = false
+		wg.Add(numWorkers)
+
+		for w := 0; w < numWorkers; w++ {
+			start := w * batchSize   //on calcule la première cellule sur laquelle on va effectuer des modifications
+			end := start + batchSize //on calcule la dernière cellule
+			if w == numWorkers-1 {
+				end = sizeInt * sizeInt //si les divisions par numWorkers n'avait pas un reste nul
+			}
+			go processBatch(currentGrid, nextGrid, start, end, sizeInt, &changement, &wg)
+		}
+
+		wg.Wait() //on attends que tous les worker polls aient fini avant de recommencer un tour
+
+		// Échange des grilles
+		swapGrids(&currentGrid, &nextGrid)
+
+		if display {
+			//construire le string à partir de la matrice
+			//envoyer au client
+		}
+
+	}
+
+	fmt.Printf("\nTemps d'exécution avec goroutines sur plusieurs cases: %v\n", time.Since(start))
+	performances(nbIterations, sizeInt, tempsInfectionMoyen, probaInfectionMoyenne, proba)
+
+}
+
+func gestionConnexionOld(conn net.Conn) {
+	defer conn.Close()
+	reader := bufio.NewReader(conn)
+
+	// Phase 1 : Questions initiales
+	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
+	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
+	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
+
+	// Conversion de la taille de la grille en entier
+	sizeInt, err := strconv.Atoi(size)
+	if err != nil {
+		fmt.Println("Erreur de conversion de la taille :", err)
+		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
+		return
+	}
+
+	// Confirmation des réponses reçues
+	fmt.Printf("Paramètres reçus : Taille = %s, Iterations = %s, TempsInfection = %s\n", size, nombreIterations, tempsInfection)
+	_, _ = io.WriteString(conn, "Paramètres reçus, début de l'envoi des données.\n")
+
+	// Phase 2 : Envoi continu de données
+	for i := 0; i < 10; i++ { // Simulation de 10 envois
+		data := fmt.Sprintf("Données %d : Simulation de calcul avec grille %dx%d...\n", i+1, sizeInt, sizeInt)
+		//ici on va faire l'automate cellulaire
+		//il faut faire une fonction autre que main qui va prendre les paramètres pour construire la matrice et envoyer le string qui sera affiché
+		//côté client
+	}
+
+	// Signal de fin
+	_, _ = io.WriteString(conn, "FIN_DATA\n")
 }
 
 func sendMatrix(matrice *matrice, conn net.Conn) {

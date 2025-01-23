@@ -8,47 +8,57 @@ import (
 )
 
 type Cell struct {
-	Etat                  string //"I" infecté, "S" sain, "G" guéri
+	Etat                  string
 	probaInfectionMoyenne float32
-	tempsInfectionRestant int //nombre d'itérations où il sera encore infecté
+	tempsInfectionRestant int
 	tempsImmuniteRestant  int
 	posi                  int
 	posj                  int
 }
 
-func initcellule(cellule *Cell, probaInfectionMoyenne float32, tempsInfectionMoyen int, i int, j int, proba float32, wg *sync.WaitGroup) {
+// Copie profonde d'une cellule (pas seulement le pointeur)
+func (c *Cell) clone() Cell {
+	return Cell{
+		Etat:                  c.Etat,
+		probaInfectionMoyenne: c.probaInfectionMoyenne,
+		tempsInfectionRestant: c.tempsInfectionRestant,
+		tempsImmuniteRestant:  c.tempsImmuniteRestant,
+		posi:                  c.posi,
+		posj:                  c.posj,
+	}
+}
+
+// initialise la cellule avec des probas qu'elle soit infectée, le temps qu'elle restera infectée (une immunité variable)
+func initcellule(cellule *Cell, probaInfectionMoyenne float32, tempsInfectionMoyen int, i int, j int, proba float32) {
 	cellule.posi = i
 	cellule.posj = j
 
-	aleatoire := rand.Float32() //genere un nombre aleatoire entre 0 et 1 (loi uniforme)
-	if aleatoire > proba {
+	if rand.Float32() > proba {
 		cellule.Etat = "S"
 		cellule.probaInfectionMoyenne = probaInfectionMoyenne
 		cellule.tempsInfectionRestant = -1
 		cellule.tempsImmuniteRestant = -1
-
 	} else {
 		cellule.Etat = "I"
 		cellule.probaInfectionMoyenne = probaInfectionMoyenne
-		cellule.tempsInfectionRestant = tempsInfectionMoyen + rand.Intn(11) - 5 // temps moyen + nombre aléatoire entre -5 et 5
+		cellule.tempsInfectionRestant = tempsInfectionMoyen + rand.Intn(11) - 5
 		cellule.tempsImmuniteRestant = -1
-
 	}
-	wg.Done()
 }
 
-func main() {
+// échange la grille de lecture et d'écriture pour garder des mises à jour cohérentes
+func swapGrids(current, next *[][]Cell) {
+	*current, *next = *next, *current
+}
+
+func ancienMain() {
 	var size int
 	var proba float32 = 0.2
 	var probaInfectionMoyenne float32
-	var nbIterations int
-	var tempsInfectionMoyen int
-	var wg sync.WaitGroup
-	var syncmodification sync.WaitGroup
+	var nbIterations, tempsInfectionMoyen int
 	var display bool
-	var temp string
-	var fin string
-	var changement bool
+	var temp, fin string
+
 	fmt.Print("entrez la taille de la grille ")
 	fmt.Scanln(&size)
 	fmt.Print("Entrez le nombre d'itérations ")
@@ -58,52 +68,59 @@ func main() {
 	fmt.Print("Voulez-vous afficher l'état de l'automate dans la console à chaque itération ? (oui/non)")
 	fmt.Scanln(&temp)
 	display = temp == "oui" || temp == "Oui" || temp == "OUI"
+
 	rand.Seed(time.Now().UnixNano())
-	fmt.Print("Initialisation de la grille...")
 	start := time.Now()
-	matrice := make([][]Cell, size)
-	for i := range matrice {
-		matrice[i] = make([]Cell, size)
 
-	}
-	wg.Add(size * size)
-
-	for i := range matrice {
-		for j := range matrice[i] {
-			go initcellule(&matrice[i][j], probaInfectionMoyenne, tempsInfectionMoyen, i, j, proba, &wg)
-
+	// Création des deux grilles pour éviter d'écrire dans la même grile que celle où l'on lit
+	currentGrid := make([][]Cell, size)
+	nextGrid := make([][]Cell, size)
+	for i := range currentGrid {
+		currentGrid[i] = make([]Cell, size)
+		nextGrid[i] = make([]Cell, size)
+		for j := range currentGrid[i] {
+			initcellule(&currentGrid[i][j], probaInfectionMoyenne, tempsInfectionMoyen, i, j, proba)
 		}
 	}
-	wg.Wait()
-	fmt.Print("Execution du programme principal")
 
-	//programme principal
-	var iter int
-	changement = false
+	numWorkers := 8                         //mettre la même valeur que le nombre de coeur
+	batchSize := (size * size) / numWorkers //on calcule la taille de la sous grille sur laquelle on va travailler (pas forcément un carré)
+	if batchSize < 1 {
+		batchSize = 1
+	}
 
-	for i := 0; i < nbIterations; i++ {
-		wg.Add(size * size)
-		syncmodification.Add(size * size)
+	var wg sync.WaitGroup
+	changement := false
+
+	// Boucle principale
+	for iter := 0; iter < nbIterations; iter++ {
 		changement = false
+		wg.Add(numWorkers)
 
-		for j := range matrice {
-			for k := range matrice[j] {
-				go evolveCell(&matrice[j][k], matrice, &wg, &syncmodification, &changement)
+		for w := 0; w < numWorkers; w++ {
+			start := w * batchSize   //on calcule la première cellule sur laquelle on va effectuer des modifications
+			end := start + batchSize //on calcule la dernière cellule
+			if w == numWorkers-1 {
+				end = size * size //si les divisions par numWorkers n'avait pas un reste nul
 			}
+			go processBatch(currentGrid, nextGrid, start, end, size, &changement, &wg)
 		}
-		wg.Wait()
+
+		wg.Wait() //on attends que tous les worker polls aient fini avant de recommencer un tour
+
+		// Échange des grilles
+		swapGrids(&currentGrid, &nextGrid)
+
 		if display {
-			displayMatrix(matrice)
+			displayMatrix(currentGrid)
 		}
-		iter = i
-	}
-	if iter < nbIterations {
-		fmt.Printf("Le programme a trouvé un état stable et s'est arrêté à la %d itération", iter)
 
 	}
-	visualizeMatrix(matrice, "fin.png")
-	fmt.Printf("\ntemps d'execution: %v", time.Since(start))
+
+	fmt.Printf("\nTemps d'exécution avec goroutines sur plusieurs cases: %v\n", time.Since(start))
 	performances(nbIterations, size, tempsInfectionMoyen, probaInfectionMoyenne, proba)
+
 	fmt.Print("Appuyez sur n'importe quelle touche pour quitter le programme")
+
 	fmt.Scanln(&fin)
 }

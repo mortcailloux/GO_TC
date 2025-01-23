@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// initcellule séquentielle
 func initcellule2(cellule *Cell, probaInfectionMoyenne float32, tempsInfectionMoyen int, i int, j int, proba float32) {
 	cellule.posi = i
 	cellule.posj = j
@@ -26,11 +27,12 @@ func initcellule2(cellule *Cell, probaInfectionMoyenne float32, tempsInfectionMo
 	}
 }
 
+// eveolvecell séquentielle
 func evolveCell2(cell *Cell, grid [][]Cell, changement *bool) {
 	rand.Seed(time.Now().UnixNano())
 
 	// Find neighboring cells
-	neighbors := findNeighbors(cell, grid)
+	neighbors := findNeighbors1(cell, grid)
 
 	// For each possible state
 	switch cell.Etat {
@@ -68,6 +70,7 @@ func evolveCell2(cell *Cell, grid [][]Cell, changement *bool) {
 	//utile pour arrêter le programme plus tôt s'il n'y a plus de changements même si les itérations n'ont pas fini
 }
 
+// test les performances de l'execution séquentielle
 func performances(nbIterations int, size int, tempsInfectionMoyen int, probaInfectionMoyenne float32, proba float32) {
 	fmt.Printf("performances")
 	start2 := time.Now()
@@ -83,27 +86,26 @@ func performances(nbIterations int, size int, tempsInfectionMoyen int, probaInfe
 
 		}
 	}
-	fmt.Print("Execution du programme principal")
+	fmt.Print("Execution du programme principal\n")
 	changement := false
 	//programme principal
 	var iter int
 
 	for i := 0; i < nbIterations; i++ {
-		fmt.Printf("boucle")
 
 		for j := range matrice {
 			for k := range matrice[j] {
-				go evolveCell2(&matrice[j][k], matrice, &changement)
+				evolveCell2(&matrice[j][k], matrice, &changement)
 			}
 		}
 
 		iter = i
 	}
-	if iter < nbIterations {
+	if iter < nbIterations-1 {
 		fmt.Printf("Le programme a trouvé un état stable et s'est arrêté à la %d itération", iter)
 
 	}
 	visualizeMatrix(matrice, "fin.png")
-	fmt.Printf("\ntemps d'execution fonction test: %v", time.Since(start2))
+	fmt.Printf("\ntemps d'execution séquentielle: %v", time.Since(start2))
 	//programme qui teste les performances
 }
