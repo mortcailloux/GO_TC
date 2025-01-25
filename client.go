@@ -10,6 +10,7 @@ import (
 )
 
 func client(portString string) {
+	var fin string
 	// Connect to the server
 	conn, err := net.Dial("tcp", portString)
 	if err != nil {
@@ -36,7 +37,7 @@ func client(portString string) {
 		fmt.Print("Serveur : " + message)
 
 		// Détection du début de la Phase 2
-		if strings.TrimSpace(message) == "Début de l'envoi des données." { //fin de la phase 1
+		if strings.TrimSpace(message) == "Paramètres reçus, début de l'envoi des données." { //fin de la phase 1
 			break
 		}
 
@@ -66,7 +67,7 @@ func client(portString string) {
 			fmt.Println("Erreur de lecture des données :", err)
 			break
 		}
-
+		fmt.Print(data)
 		// Détection de la fin de l'envoi
 		if strings.TrimSpace(data) == "FIN_DATA" {
 			fmt.Println("Fin de l'envoi des données.") //fin du programme
@@ -75,5 +76,8 @@ func client(portString string) {
 
 		// Afficher les données
 		fmt.Print("Données reçues : " + data)
+
 	}
+	fmt.Print("appuyez sur entrée pour finir")
+	fmt.Scanln(&fin)
 }

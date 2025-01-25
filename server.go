@@ -86,8 +86,6 @@ func gestionConnexion(conn net.Conn) {
 
 	// Phase 2 : Envoi continu de données
 
-	// Signal de fin
-	_, _ = io.WriteString(conn, "FIN_DATA\n")
 	var proba float32 = 0.2
 	var probaInfectionMoyenne float32
 
@@ -142,6 +140,8 @@ func gestionConnexion(conn net.Conn) {
 		}
 
 	}
+	// Signal de fin
+	_, _ = io.WriteString(conn, "FIN_DATA\n")
 
 	fmt.Printf("\nTemps d'exécution avec goroutines sur plusieurs cases: %v\n", time.Since(start))
 	performances(nbIterations, sizeInt, tempsInfectionMoyen, probaInfectionMoyenne, proba)
@@ -149,7 +149,9 @@ func gestionConnexion(conn net.Conn) {
 }
 
 func sendMatrix(matrice *[][]Cell, conn net.Conn) {
+	fmt.Println("Envoie de la matrice ")
 	stringMatrix := MatrixtoString(matrice)
+	fmt.Print(stringMatrix)
 	_, err := io.WriteString(conn, stringMatrix+"\n")
 	if err != nil {
 		fmt.Println("Erreur lors de l'envoi de la matrice :", err)
