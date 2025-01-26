@@ -71,9 +71,9 @@ func MatrixtoString(matrix *[][]Cell) string {
 
 	// Afficher la légende
 	retour += "\nLégende:"
-	retour += "S: Sain"
-	retour += "I: Infecté"
-	retour += "G: Guéri"
+	retour += "\nS: Sain"
+	retour += "\nI: Infecté"
+	retour += "\nG: Guéri"
 	retour += "\n \n \n " //espaces à la fin pour distinguer les matrices quand elles sont affichées à la suite
 
 	return retour
