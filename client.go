@@ -7,7 +7,19 @@ import (
 	"net"
 	"os"
 	"strings"
+	"unicode"
 )
+
+func isNumber(user_input string) bool {
+	user_input = strings.TrimSpace(user_input)
+
+	for _, char := range user_input {
+		if !unicode.IsDigit(char) {
+			return false
+		}
+	}
+	return true
+}
 
 func client(portString string) {
 	var fin string
@@ -43,11 +55,17 @@ func client(portString string) {
 		}
 
 		// Répondre à la question
+
 		fmt.Print(">> ")
 		response, err := userInputReader.ReadString('\n')
 		if err != nil {
 			fmt.Println("Erreur lors de la lecture de l'entrée utilisateur :", err)
 			return
+		}
+
+		if !isNumber(response) {
+			fmt.Print("Veuillez entrer un nombre valide !")
+			os.Exit(1)
 		}
 
 		_, err = io.WriteString(conn, response)
