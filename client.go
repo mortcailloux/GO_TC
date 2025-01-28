@@ -10,8 +10,16 @@ import (
 	"unicode"
 )
 
-func isNumber(user_input string) bool {
+func isValid(user_input string) bool {
 	user_input = strings.TrimSpace(user_input)
+
+	if user_input == "0" {
+		return false
+	}
+
+	if user_input[0] == '-' {
+		return false
+	}
 
 	for _, char := range user_input {
 		if !unicode.IsDigit(char) {
@@ -63,7 +71,7 @@ func client(portString string) {
 			return
 		}
 
-		if !isNumber(response) {
+		if !isValid(response) {
 			fmt.Print("Veuillez entrer un nombre valide !")
 			os.Exit(1)
 		}
