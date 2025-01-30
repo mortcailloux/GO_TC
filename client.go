@@ -10,6 +10,7 @@ import (
 	"unicode"
 )
 
+// à changer, c'est pas fou comme fonction ça
 func isValid(user_input string) bool {
 	user_input = strings.TrimSpace(user_input)
 
@@ -69,11 +70,6 @@ func client(portString string) {
 		if err != nil {
 			fmt.Println("Erreur lors de la lecture de l'entrée utilisateur :", err)
 			return
-		}
-
-		if !isValid(response) {
-			fmt.Print("Veuillez entrer un nombre valide !")
-			os.Exit(1)
 		}
 
 		_, err = io.WriteString(conn, response)

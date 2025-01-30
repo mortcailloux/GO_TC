@@ -105,7 +105,7 @@ func performances(nbIterations int, size int, tempsInfectionMoyen int, probaInfe
 		fmt.Printf("Le programme a trouvé un état stable et s'est arrêté à la %d itération", iter)
 
 	}
-	visualizeMatrix(matrice, "fin.png")
+	visualizeMatrix(&matrice, "fin.png")
 	fmt.Printf("\ntemps d'execution séquentielle: %v", time.Since(start2))
 	//programme qui teste les performances
 }

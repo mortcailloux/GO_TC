@@ -89,12 +89,12 @@ func createSquare(x, y float64) plotter.XYs {
 	}
 }
 
-func visualizeMatrix(matrix [][]Cell, filename string) error {
-	rows := len(matrix)
+func visualizeMatrix(matrix *[][]Cell, filename string) error {
+	rows := len(*matrix)
 	if rows == 0 {
 		return fmt.Errorf("matrice vide")
 	}
-	cols := len(matrix[0])
+	cols := len((*matrix)[0])
 
 	// Créer un graphique
 	p := plot.New()
@@ -110,7 +110,7 @@ func visualizeMatrix(matrix [][]Cell, filename string) error {
 			}
 
 			// Définir la couleur selon l'état
-			switch matrix[i][j].Etat {
+			switch (*matrix)[i][j].Etat {
 			case "S":
 				poly.Color = color.RGBA{G: 255, A: 255} // Vert pour Sain
 			case "I":
@@ -164,7 +164,7 @@ func test() {
 	}
 
 	// Visualiser la matrice
-	if err := visualizeMatrix(matrix, "matrix.png"); err != nil {
+	if err := visualizeMatrix(&matrix, "matrix.png"); err != nil {
 		log.Fatal(err)
 	}
 }

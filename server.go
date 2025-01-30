@@ -59,7 +59,7 @@ func gestionConnexion(conn net.Conn) {
 	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
 	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
 	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
-
+	reponse := demanderAuClient(reader, conn, "Voulez-vous enregistrer une image de la grille pour chaque itération ? (oui/non)")
 	// Conversion de la taille de la grille en entier
 	sizeInt, err := strconv.Atoi(size)
 
@@ -90,7 +90,7 @@ func gestionConnexion(conn net.Conn) {
 	var probaInfectionMoyenne float32
 
 	var display bool
-
+	output := reponse == "oui"
 	display = true
 
 	rand.Seed(time.Now().UnixNano())
@@ -138,11 +138,18 @@ func gestionConnexion(conn net.Conn) {
 		if display {
 			sendMatrix(&currentGrid, conn)
 		}
+		if output {
+			nom := fmt.Sprintf("Etape %d.png", iter)
+			visualizeMatrix(&currentGrid, nom)
+
+		}
 
 	}
 	// Signal de fin
 	_, _ = io.WriteString(conn, "FIN_DATA\n")
-
+	if !output {
+		visualizeMatrix(&currentGrid, "fin.png")
+	}
 	fmt.Printf("\nTemps d'exécution avec goroutines sur plusieurs cases: %v\n", time.Since(start))
 	performances(nbIterations, sizeInt, tempsInfectionMoyen, probaInfectionMoyenne, proba)
 
