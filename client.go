@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -80,6 +81,7 @@ func client(portString string) {
 	}
 
 	// Phase 2 : Recevoir des données en continu
+	start := time.Now()
 	for {
 		// on lit une ligne reçue
 		data, err := serverReader.ReadString('\n')
@@ -94,6 +96,8 @@ func client(portString string) {
 		// Détection de la fin de l'envoi
 		if strings.TrimSpace(data) == "FIN_DATA" {
 			fmt.Println("Fin de l'envoi des données.") //fin du programme
+			elapsed := time.Since(start)
+			fmt.Printf("Temps d'exécution du programme : %v\n", elapsed)
 			break
 		}
 
