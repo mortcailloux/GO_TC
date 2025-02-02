@@ -124,13 +124,24 @@ func ancienMain() {
 
 	fmt.Scanln(&fin)
 }
+func serv_or_client() string {
+	var rep string
+	fmt.Print("Lances tu le programme en tant que client ou serveur ? (rep attendue: client/serveur) \n")
+	fmt.Scanln(&rep)
+	for rep != "serveur" && rep != "client" {
+		fmt.Print("erreur lors de la saisie du texte, veuillez écrire client ou serveur uniquement\n")
+		fmt.Print("Lances tu le programme en tant que client ou serveur ? (rep attendue: client/serveur) \n")
+		fmt.Scanln(&rep)
+
+	}
+	return rep
+}
 
 func main() {
 	var serveur bool
 
-	var rep string
-	fmt.Print("Lances tu le programme en tant que client ou serveur ? (rep attendue: client/serveur) \n")
-	fmt.Scanln(&rep)
+	rep := serv_or_client()
+
 	listeningPort := "127.0.0.1:5124"
 	serveur = rep == "serveur"
 	if serveur {

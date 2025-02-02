@@ -16,6 +16,7 @@ func server(portString string) {
 	ln, err := net.Listen("tcp", portString)
 	if err != nil {
 		fmt.Println("Erreur lors de l'écoute sur le port :", err)
+		fmt.Print("\n Veuillez fermer votre serveur précédent")
 		return
 	}
 	defer ln.Close()
@@ -31,24 +32,54 @@ func server(portString string) {
 		go gestionConnexion(conn)
 	}
 }
-func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) string {
+func demanderAuClient(reader *bufio.Reader, conn net.Conn, demande string) (string, error) {
 	// Envoie une demande au client
 	_, err := io.WriteString(conn, demande+"\n")
 	if err != nil {
 		fmt.Println("Erreur lors de l'envoi de la demande :", err)
-		return ""
+		return "", err
 	}
 
 	// Lit la réponse du client
 	reponse, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Println("Erreur lors de la lecture :", err)
-		return ""
+		return "", err
 	}
 
 	// Nettoie la réponse
 	reponse = strings.TrimSpace(reponse)
-	return reponse
+	return reponse, err
+}
+
+func ask_int(reader *bufio.Reader, conn net.Conn, demande string) (int, error) {
+
+	size, err2 := demanderAuClient(reader, conn, demande)
+	sizeInt, err := strconv.Atoi(size)
+	for err != nil {
+		if err2 != nil {
+			fmt.Print("\nErreur lors de la communication au client, abandon de la communication avec lui\n")
+			break
+		}
+		fmt.Println("Erreur de conversion de la taille :", err)
+		size, err2 = demanderAuClient(reader, conn, "veuillez entrer un entier")
+		sizeInt, err = strconv.Atoi(size)
+
+	}
+	return sizeInt, err2
+}
+func ask_string(reader *bufio.Reader, conn net.Conn, demande string) (string, error) {
+
+	rep, err := demanderAuClient(reader, conn, demande)
+	for rep != "oui" && rep != "non" {
+		if err != nil {
+			fmt.Print("Erreur lors de la communication au client, abandon de la communication avec lui")
+			break
+		}
+		rep, err = demanderAuClient(reader, conn, "veuillez entrer une réponse valide (oui ou non)")
+
+	}
+	return rep, err
 }
 
 func gestionConnexion(conn net.Conn) {
@@ -56,32 +87,27 @@ func gestionConnexion(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	// Phase 1 : Questions initiales
-	size := demanderAuClient(reader, conn, "Veuillez entrer la taille de la grille :")
-	nombreIterations := demanderAuClient(reader, conn, "Veuillez entrer le nombre d'itérations :")
-	tempsInfection := demanderAuClient(reader, conn, "Veuillez entrer le temps d'infection moyen :")
-	reponse := demanderAuClient(reader, conn, "Voulez-vous enregistrer une image de la grille pour chaque itération ? (oui/non)")
-	// Conversion de la taille de la grille en entier
-	sizeInt, err := strconv.Atoi(size)
+	sizeInt, err := ask_int(reader, conn, "Veuillez entrer la taille de la grille :")
+	if err != nil {
+		return
 
+	}
+	nbIterations, err := ask_int(reader, conn, "Veuillez entrer le nombre d'itérations :")
 	if err != nil {
-		fmt.Println("Erreur de conversion de la taille :", err)
-		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
 		return
 	}
-	nbIterations, err := strconv.Atoi(nombreIterations)
+	tempsInfectionMoyen, err := ask_int(reader, conn, "Veuillez entrer le temps d'infection moyen : (nombre d'itérations)")
 	if err != nil {
-		fmt.Println("Erreur de conversion du nombre d'itérations :", err)
-		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
 		return
 	}
-	tempsInfectionMoyen, err := strconv.Atoi(nombreIterations)
+	reponse, err := ask_string(reader, conn, "Voulez-vous enregistrer une image de la grille pour chaque itération ? (oui/non)")
 	if err != nil {
-		fmt.Println("Erreur de conversion du temps d'infection :", err)
-		_, _ = io.WriteString(conn, "Erreur de conversion de la taille de la grille.\n")
 		return
 	}
+	// Conversion de la taille de la grille en entier
+
 	// Confirmation des réponses reçues
-	fmt.Printf("Paramètres reçus : Taille = %s, Iterations = %s, TempsInfection = %s\n", size, nombreIterations, tempsInfection)
+	fmt.Printf("Paramètres reçus : Taille = %d, Iterations = %d, TempsInfection = %d\n", sizeInt, nbIterations, tempsInfectionMoyen)
 	_, _ = io.WriteString(conn, "Paramètres reçus, début de l'envoi des données.\n")
 
 	// Phase 2 : Envoi continu de données
@@ -147,10 +173,11 @@ func gestionConnexion(conn net.Conn) {
 	}
 	// Signal de fin
 	_, _ = io.WriteString(conn, "FIN_DATA\n")
+	fmt.Printf("\nTemps d'exécution avec goroutines sur plusieurs cases: %v\n", time.Since(start))
 	if !output {
 		visualizeMatrix(&currentGrid, "fin.png")
 	}
-	fmt.Printf("\nTemps d'exécution avec goroutines sur plusieurs cases: %v\n", time.Since(start))
+
 	performances(nbIterations, sizeInt, tempsInfectionMoyen, probaInfectionMoyenne, proba)
 
 }
